@@ -5,6 +5,7 @@
 #include "DolphinQt/Debugger/BreakpointWidget.h"
 
 #include <QHeaderView>
+#include <QMenu>
 #include <QTableWidget>
 #include <QToolBar>
 #include <QVBoxLayout>
@@ -30,6 +31,7 @@ BreakpointWidget::BreakpointWidget(QWidget* parent) : QDockWidget(parent)
             !Settings::Instance().IsDebugModeEnabled());
 
   setAllowedAreas(Qt::AllDockWidgetAreas);
+  setContextMenuPolicy(Qt::CustomContextMenu);
 
   auto& settings = Settings::GetQSettings();
 
@@ -91,6 +93,8 @@ void BreakpointWidget::CreateWidgets()
       emit SelectedBreakpoint(address);
     }
   });
+  connect(m_table, SIGNAL(customContextMenuRequested(const QPoint&)), this, 
+    BreakpointWidget::OnRightClick(const QPoint&));
 
   auto* layout = new QVBoxLayout;
 
@@ -105,6 +109,8 @@ void BreakpointWidget::CreateWidgets()
 
   m_load = m_toolbar->addAction(tr("Load"), this, &BreakpointWidget::OnLoad);
   m_save = m_toolbar->addAction(tr("Save"), this, &BreakpointWidget::OnSave);
+
+  m_menu = nullptr;
 
   m_new->setEnabled(false);
   m_load->setEnabled(false);
@@ -196,7 +202,7 @@ void BreakpointWidget::Update()
   for (const auto& mbp : PowerPC::memchecks.GetMemChecks())
   {
     m_table->setRowCount(i + 1);
-    auto* active = create_item(mbp.break_on_hit || mbp.log_on_hit ? tr("on") : QString());
+    auto* active = create_item(mbp.is_enabled ? tr("on") : QString());
     active->setData(Qt::UserRole, mbp.start_address);
 
     m_table->setItem(i, 0, active);
@@ -303,6 +309,31 @@ void BreakpointWidget::OnSave()
   ini.SetLines("BreakPoints", PowerPC::breakpoints.GetStrings());
   ini.SetLines("MemoryBreakPoints", PowerPC::memchecks.GetStrings());
   ini.Save(File::GetUserPath(D_GAMESETTINGS_IDX) + SConfig::GetInstance().GetGameID() + ".ini");
+}
+
+void BreakpointWidget::toggleActivatedStatus()
+{
+  
+}
+
+void BreakpointWidget::OnRightClick(const QPoint& pos)
+{
+  QTableWidgetItem *item = m_table->at(pos);
+
+  if (!item)
+    return;
+  else
+  {
+    if (m_menu)
+      delete m_menu;
+    m_menu = new QMenu(this);
+
+    QAction *activate = new QAction(mbp.enabled ? tr("Deactivate") : tr("Activate"));
+    connect(activate, SIGNAL(triggered()), this, BreakpointWidget::toggleActivatedStatus(item));
+    m_menu->add(activate);
+
+    m_menu->popup(pos);
+  }
 }
 
 void BreakpointWidget::AddBP(u32 addr)

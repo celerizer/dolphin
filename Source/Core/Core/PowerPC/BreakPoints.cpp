@@ -150,6 +150,7 @@ void MemChecks::AddFromStrings(const TMemChecksStr& mc_strings)
     std::stringstream ss;
     ss << std::hex << mc_string;
     ss >> mc.start_address;
+    mc.is_enabled = true;
     mc.is_ranged = mc_string.find('n') != mc_string.npos;
     mc.is_break_on_read = mc_string.find('r') != mc_string.npos;
     mc.is_break_on_write = mc_string.find('w') != mc_string.npos;
@@ -229,7 +230,7 @@ bool MemChecks::OverlapsMemcheck(u32 address, u32 length) const
 bool TMemCheck::Action(Common::DebugInterface* debug_interface, u32 value, u32 addr, bool write,
                        size_t size, u32 pc)
 {
-  if ((write && is_break_on_write) || (!write && is_break_on_read))
+  if (is_enabled && (write && is_break_on_write) || (!write && is_break_on_read))
   {
     if (log_on_hit)
     {
@@ -241,5 +242,6 @@ bool TMemCheck::Action(Common::DebugInterface* debug_interface, u32 value, u32 a
     if (break_on_hit)
       return true;
   }
+
   return false;
 }

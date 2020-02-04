@@ -27,6 +27,7 @@ struct TMemCheck
   u32 start_address = 0;
   u32 end_address = 0;
 
+  bool is_enabled = false;
   bool is_ranged = false;
 
   bool is_break_on_read = false;
